@@ -1,0 +1,203 @@
+openapi: 3.0.0
+info:
+  title: Vehicle Service API
+  version: 1.0.0
+  description: API for managing vehicles in the TAMP system
+
+servers:
+  - url: http://localhost:8001
+    description: Local development server
+
+components:
+  schemas:
+    Vehicle:
+      type: object
+      required:
+        - make
+        - model
+        - year
+        - license_plate
+      properties:
+        make:
+          type: string
+          example: "Toyota"
+        model:
+          type: string
+          example: "Hilux"
+        year:
+          type: integer
+          example: 2023
+        license_plate:
+          type: string
+          example: "ABC123"
+
+    VehicleResponse:
+      allOf:
+        - $ref: '#/components/schemas/Vehicle'
+        - type: object
+          required:
+            - id
+            - owner_id
+            - created_at
+          properties:
+            id:
+              type: integer
+              example: 1
+            owner_id:
+              type: string
+              example: "user123"
+            created_at:
+              type: string
+              format: date-time
+              example: "2024-03-20T10:00:00Z"
+
+    PaginatedVehicleResponse:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleResponse'
+        total:
+          type: integer
+          example: 100
+        limit:
+          type: integer
+          example: 50
+        offset:
+          type: integer
+          example: 0
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+paths:
+  /vehicles:
+    post:
+      summary: Create a new vehicle
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '200':
+          description: Vehicle created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          description: Invalid or missing token
+        '403':
+          description: User is not a truck owner
+
+    get:
+      summary: Get all vehicles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          description: Invalid or missing token
+
+  /vehicles/all:
+    get:
+      summary: Get all vehicles with pagination (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          description: Number of items to skip
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Paginated list of vehicles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVehicleResponse'
+        '401':
+          description: Invalid or missing token
+        '403':
+          description: User is not an admin
+
+  /vehicles/{id}:
+    get:
+      summary: Get a specific vehicle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vehicle details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          description: Invalid or missing token
+        '403':
+          description: User is not the owner or an admin
+        '404':
+          description: Vehicle not found or has been deleted
+
+    delete:
+      summary: Soft delete a vehicle
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vehicle successfully deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          description: Invalid or missing token
+        '403':
+          description: User is not the owner
+        '404':
+          description: Vehicle not found or already deleted 
