@@ -1,12 +1,11 @@
-from pydantic_settings import BaseSettings
+import os
 
-class Settings(BaseSettings):
-    HOST: str = "0.0.0.0"
-    PORT: int = 8001
-    AUTH_SERVICE_URL: str = "http://tamp_auth_svc:8000"
-    database_url: str = "postgresql://postgres:postgres@localhost:5432/tamp_vehicle"
 
-    class Config:
-        env_file = ".env"
+class Config:
+    AUTH_SERVICE_URL = os.getenv(
+        "AUTH_SERVICE_URL",
+        "http://tamp_auth_svc:8000"
+    )
 
-settings = Settings() 
+
+config = Config()
