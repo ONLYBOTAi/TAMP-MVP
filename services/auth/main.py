@@ -50,6 +50,10 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+@app.get("/")
+async def root():
+    return {"status": "auth service running", "version": "1.0.0"}
+
 @app.post("/register", response_model=Token)
 async def register(user: User):
     if user.username in users_db:
