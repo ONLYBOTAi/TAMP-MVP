@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Vehicle Service API
+  version: 1.0.0
+  description: API for managing vehicles in the TAMP system
+
+servers:
+  - url: http://localhost:8001
+    description: Local development server
+
+paths:
+  /vehicles:
+    post:
+      summary: Create a new vehicle
+      description: Creates a new vehicle for a truck owner
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JWT token for authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '201':
+          description: Vehicle created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          description: Unauthorized - Invalid or missing token
+        '403':
+          description: Forbidden - User is not a truck owner
+    get:
+      summary: Get all vehicles
+      description: Retrieves all vehicles for the authenticated user
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JWT token for authentication
+      responses:
+        '200':
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleResponse'
+        '401':
+          description: Unauthorized - Invalid or missing token
+
+components:
+  schemas:
+    Vehicle:
+      type: object
+      required:
+        - make
+        - model
+        - year
+        - license_plate
+      properties:
+        make:
+          type: string
+          description: Vehicle manufacturer
+        model:
+          type: string
+          description: Vehicle model
+        year:
+          type: integer
+          description: Manufacturing year
+        license_plate:
+          type: string
+          description: Vehicle license plate number
+    VehicleResponse:
+      allOf:
+        - $ref: '#/components/schemas/Vehicle'
+        - type: object
+          properties:
+            id:
+              type: integer
+              description: Vehicle ID
+            owner_id:
+              type: string
+              description: ID of the vehicle owner
+            created_at:
+              type: string
+              format: date-time
+              description: Vehicle creation timestamp
+
