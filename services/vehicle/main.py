@@ -1,33 +1,48 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import httpx
 from datetime import datetime
 import os
+from sqlalchemy.orm import Session
+from .database import get_db
+from .models import Vehicle as VehicleModel
 
 
 app = FastAPI(title="Vehicle Service")
 
 
 # Models
-class Vehicle(BaseModel):
+class VehicleBase(BaseModel):
     make: str
     model: str
     year: int
     license_plate: str
 
+    class Config:
+        from_attributes = True
 
-class VehicleResponse(Vehicle):
+
+class VehicleCreate(VehicleBase):
+    pass
+
+
+class VehicleResponse(VehicleBase):
     id: int
     owner_id: str
     created_at: datetime
+    deleted_at: Optional[datetime] = None
 
 
 # Dependencies
-async def verify_token(token: str):
+async def verify_token(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
+    
+    token = authorization.split(" ")[1]
     auth_service_url = os.getenv(
         "AUTH_SERVICE_URL",
-        "http://tamp_auth_svc:8000"
+        "http://localhost:8000"
     )
     async with httpx.AsyncClient() as client:
         try:
@@ -52,26 +67,52 @@ async def root():
 
 
 @app.post("/vehicles", response_model=VehicleResponse)
-async def create_vehicle(vehicle: Vehicle, token: str):
-    user = await verify_token(token)
+async def create_vehicle(
+    vehicle: VehicleCreate,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_token)
+):
     if user["role"] != "truck_owner":
         raise HTTPException(
             status_code=403,
             detail="Only truck owners can create vehicles"
         )
-    # Here you would typically save to a database
-    # For now, we'll return a mock response
-    return {
+    
+    # Check if license plate already exists
+    existing = db.query(VehicleModel).filter(
+        VehicleModel.license_plate == vehicle.license_plate,
+        VehicleModel.deleted_at.is_(None)
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Vehicle with this license plate already exists"
+        )
+    
+    # Create new vehicle
+    db_vehicle = VehicleModel(
         **vehicle.dict(),
-        "id": 1,
-        "owner_id": user.get("sub"),
-        "created_at": datetime.now()
-    }
+        owner_id=user["sub"],
+        created_at=datetime.now()
+    )
+    
+    db.add(db_vehicle)
+    db.commit()
+    db.refresh(db_vehicle)
+    
+    return db_vehicle
 
 
 @app.get("/vehicles", response_model=List[VehicleResponse])
-async def get_vehicles(token: str):
-    await verify_token(token)
-    # Here you would typically fetch from a database
-    # For now, we'll return a mock response
-    return []
+async def get_vehicles(
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_token)
+):
+    # For now, return all vehicles
+    # TODO: Add filtering based on user role and ownership
+    vehicles = db.query(VehicleModel).filter(
+        VehicleModel.deleted_at.is_(None)
+    ).all()
+    
+    return vehicles
