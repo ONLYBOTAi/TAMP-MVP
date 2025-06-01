@@ -34,9 +34,17 @@ TOKEN=$(curl -s -X POST "${AUTH_SERVICE_URL}/login" \
     -H "Content-Type: application/json" \
     -d "{\"username\":\"${TEST_USER}\",\"password\":\"${TEST_PASSWORD}\"}" | jq -r '.access_token')
 
-VEHICLE_ID=$(curl -s -X POST "${VEHICLE_SERVICE_URL}/vehicles?token=${TOKEN}" \
+echo "Debug: Got token: $TOKEN"
+
+VEHICLE_RESPONSE=$(curl -s -X POST "${VEHICLE_SERVICE_URL}/vehicles?token=${TOKEN}" \
     -H "Content-Type: application/json" \
-    -d '{"make":"Toyota","model":"Hilux","year":2023,"license_plate":"TEST123"}' | jq -r '.id')
+    -d '{"make":"Toyota","model":"Hilux","year":2023,"license_plate":"TEST123"}')
+
+echo "Debug: Vehicle response: $VEHICLE_RESPONSE"
+
+VEHICLE_ID=$(echo $VEHICLE_RESPONSE | jq -r '.id')
+
+echo "Debug: Vehicle ID: $VEHICLE_ID"
 
 [ ! -z "$VEHICLE_ID" ]
 print_result $? "Vehicle creation successful"

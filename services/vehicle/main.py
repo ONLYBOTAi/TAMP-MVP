@@ -7,10 +7,31 @@ import os
 from sqlalchemy.orm import Session
 from .database import get_db
 from .models import Vehicle as VehicleModel
+from fastapi.middleware.cors import CORSMiddleware
+from routers import vehicle_routes
 
 
-app = FastAPI(title="Vehicle Service")
+app = FastAPI(
+    title="TAMP Vehicle Service",
+    description="Vehicle management microservice for TAMP",
+    version="1.0.0"
+)
 
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(
+    vehicle_routes.router,
+    prefix="/vehicles",
+    tags=["vehicles"]
+)
 
 # Models
 class VehicleBase(BaseModel):
@@ -61,9 +82,10 @@ async def verify_token(authorization: str = Header(...)):
 
 
 # Routes
-@app.get("/")
-async def root():
-    return {"message": "Vehicle Service is running"}
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "vehicle"}
 
 
 @app.post("/vehicles", response_model=VehicleResponse)
