@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging
-from services.auth.schemas import UserCreate, User, Token, UserLogin
-from services.auth.models.user_model import User as UserModel
-from services.auth.core.security import hash_password, verify_password, create_access_token
-from services.auth.db.db import get_db
+from schemas.auth_schema import UserCreate, User, Token, UserLogin
+from models.user_model import User as UserModel
+from core.security import hash_password, verify_password, create_access_token
+from db.db import get_db
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

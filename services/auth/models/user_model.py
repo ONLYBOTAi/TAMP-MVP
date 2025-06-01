@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from uuid import uuid4
 import enum
-from services.auth.models.base import Base  # Use shared Base
+from models.base import Base  # Use local Base
 
 class UserRole(str, enum.Enum):
     """User roles in the system."""

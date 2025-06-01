@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from services.auth.models.user_model import UserRole
+from models.user_model import UserRole
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -9,9 +9,16 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-class UserOut(UserBase):
+class User(UserBase):
+    id: int
+    is_active: bool = True
+
     class Config:
         from_attributes = True
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
 class Token(BaseModel):
     access_token: str

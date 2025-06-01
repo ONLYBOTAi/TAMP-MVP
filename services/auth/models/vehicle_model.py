@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from uuid import uuid4
 import enum
-from services.auth.models.base import Base  # Use shared Base
+from models.base import Base  # Use relative import
 
 class VehicleStatus(str, enum.Enum):
     """Vehicle status in the system."""
