@@ -7,15 +7,36 @@ from ..models.vehicle import Vehicle
 from ..schemas.vehicle import VehicleCreate, VehicleResponse, VehicleUpdate
 from ..core.security import get_current_user
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/vehicles",
+    tags=["vehicles"],
+    responses={404: {"description": "Vehicle not found"}},
+)
 
-@router.post("/", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=VehicleResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new vehicle",
+    description="Create a new vehicle for the authenticated user. Requires valid JWT token.",
+    response_description="The created vehicle"
+)
 async def create_vehicle(
     vehicle: VehicleCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a new vehicle for the authenticated user."""
+    """
+    Create a new vehicle with the following information:
+    
+    - **make**: Vehicle manufacturer
+    - **model**: Vehicle model name
+    - **year**: Manufacturing year
+    - **license_plate**: Unique license plate number
+    - **vehicle_type**: Type of vehicle (car, truck, etc.)
+    - **color**: Optional vehicle color
+    - **vin**: Optional Vehicle Identification Number
+    """
     db_vehicle = Vehicle(
         **vehicle.dict(),
         user_id=current_user["sub"]
@@ -25,24 +46,52 @@ async def create_vehicle(
     db.refresh(db_vehicle)
     return db_vehicle
 
-@router.get("/", response_model=List[VehicleResponse])
+@router.get(
+    "/",
+    response_model=List[VehicleResponse],
+    summary="Get all vehicles",
+    description="Retrieve all vehicles owned by the authenticated user. Requires valid JWT token."
+)
 async def get_vehicles(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Get all vehicles for the authenticated user."""
+    """
+    Get all vehicles for the authenticated user.
+    
+    Returns a list of vehicles with their details:
+    - Vehicle ID
+    - Make and model
+    - Year and license plate
+    - Vehicle type and color
+    - Creation and update timestamps
+    """
     vehicles = db.query(Vehicle).filter(
         Vehicle.user_id == current_user["sub"]
     ).all()
     return vehicles
 
-@router.get("/{vehicle_id}", response_model=VehicleResponse)
+@router.get(
+    "/{vehicle_id}",
+    response_model=VehicleResponse,
+    summary="Get a specific vehicle",
+    description="Retrieve details of a specific vehicle by ID. Requires valid JWT token."
+)
 async def get_vehicle(
     vehicle_id: int,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Get a specific vehicle by ID."""
+    """
+    Get a specific vehicle by ID.
+    
+    Parameters:
+    - **vehicle_id**: The ID of the vehicle to retrieve
+    
+    Returns:
+    - Vehicle details if found
+    - 404 error if vehicle not found or not owned by user
+    """
     vehicle = db.query(Vehicle).filter(
         Vehicle.id == vehicle_id,
         Vehicle.user_id == current_user["sub"]
@@ -54,14 +103,37 @@ async def get_vehicle(
         )
     return vehicle
 
-@router.put("/{vehicle_id}", response_model=VehicleResponse)
+@router.put(
+    "/{vehicle_id}",
+    response_model=VehicleResponse,
+    summary="Update a vehicle",
+    description="Update details of a specific vehicle. Requires valid JWT token."
+)
 async def update_vehicle(
     vehicle_id: int,
     vehicle_update: VehicleUpdate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Update a specific vehicle."""
+    """
+    Update a specific vehicle.
+    
+    Parameters:
+    - **vehicle_id**: The ID of the vehicle to update
+    
+    Request body:
+    - **make**: Optional new make
+    - **model**: Optional new model
+    - **year**: Optional new year
+    - **license_plate**: Optional new license plate
+    - **vehicle_type**: Optional new vehicle type
+    - **color**: Optional new color
+    - **vin**: Optional new VIN
+    
+    Returns:
+    - Updated vehicle details
+    - 404 error if vehicle not found or not owned by user
+    """
     db_vehicle = db.query(Vehicle).filter(
         Vehicle.id == vehicle_id,
         Vehicle.user_id == current_user["sub"]
@@ -79,13 +151,27 @@ async def update_vehicle(
     db.refresh(db_vehicle)
     return db_vehicle
 
-@router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{vehicle_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a vehicle",
+    description="Delete a specific vehicle. Requires valid JWT token."
+)
 async def delete_vehicle(
     vehicle_id: int,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Delete a specific vehicle."""
+    """
+    Delete a specific vehicle.
+    
+    Parameters:
+    - **vehicle_id**: The ID of the vehicle to delete
+    
+    Returns:
+    - 204 No Content on successful deletion
+    - 404 error if vehicle not found or not owned by user
+    """
     db_vehicle = db.query(Vehicle).filter(
         Vehicle.id == vehicle_id,
         Vehicle.user_id == current_user["sub"]
