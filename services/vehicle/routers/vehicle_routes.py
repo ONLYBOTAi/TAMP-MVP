@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+import logging
 
 from ..database import get_db
 from ..models.vehicle import Vehicle
 from ..schemas.vehicle import VehicleCreate, VehicleResponse, VehicleUpdate
 from ..core.security import get_current_user
+from ..core.error_handlers import handle_db_error, handle_not_found, handle_auth_error
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/vehicles",
@@ -37,14 +41,19 @@ async def create_vehicle(
     - **color**: Optional vehicle color
     - **vin**: Optional Vehicle Identification Number
     """
-    db_vehicle = Vehicle(
-        **vehicle.dict(),
-        user_id=current_user["sub"]
-    )
-    db.add(db_vehicle)
-    db.commit()
-    db.refresh(db_vehicle)
-    return db_vehicle
+    try:
+        logger.info(f"Creating new vehicle for user {current_user['sub']}")
+        db_vehicle = Vehicle(
+            **vehicle.dict(),
+            user_id=current_user["sub"]
+        )
+        db.add(db_vehicle)
+        db.commit()
+        db.refresh(db_vehicle)
+        logger.info(f"Successfully created vehicle with ID {db_vehicle.id}")
+        return db_vehicle
+    except Exception as e:
+        handle_db_error("create_vehicle", e)
 
 @router.get(
     "/",
@@ -66,10 +75,15 @@ async def get_vehicles(
     - Vehicle type and color
     - Creation and update timestamps
     """
-    vehicles = db.query(Vehicle).filter(
-        Vehicle.user_id == current_user["sub"]
-    ).all()
-    return vehicles
+    try:
+        logger.info(f"Retrieving vehicles for user {current_user['sub']}")
+        vehicles = db.query(Vehicle).filter(
+            Vehicle.user_id == current_user["sub"]
+        ).all()
+        logger.info(f"Found {len(vehicles)} vehicles for user {current_user['sub']}")
+        return vehicles
+    except Exception as e:
+        handle_db_error("get_vehicles", e)
 
 @router.get(
     "/{vehicle_id}",
@@ -92,16 +106,20 @@ async def get_vehicle(
     - Vehicle details if found
     - 404 error if vehicle not found or not owned by user
     """
-    vehicle = db.query(Vehicle).filter(
-        Vehicle.id == vehicle_id,
-        Vehicle.user_id == current_user["sub"]
-    ).first()
-    if not vehicle:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vehicle not found"
-        )
-    return vehicle
+    try:
+        logger.info(f"Retrieving vehicle {vehicle_id} for user {current_user['sub']}")
+        vehicle = db.query(Vehicle).filter(
+            Vehicle.id == vehicle_id,
+            Vehicle.user_id == current_user["sub"]
+        ).first()
+        
+        if not vehicle:
+            handle_not_found(vehicle_id)
+            
+        logger.info(f"Successfully retrieved vehicle {vehicle_id}")
+        return vehicle
+    except Exception as e:
+        handle_db_error("get_vehicle", e)
 
 @router.put(
     "/{vehicle_id}",
@@ -134,22 +152,26 @@ async def update_vehicle(
     - Updated vehicle details
     - 404 error if vehicle not found or not owned by user
     """
-    db_vehicle = db.query(Vehicle).filter(
-        Vehicle.id == vehicle_id,
-        Vehicle.user_id == current_user["sub"]
-    ).first()
-    if not db_vehicle:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vehicle not found"
-        )
-    
-    for field, value in vehicle_update.dict(exclude_unset=True).items():
-        setattr(db_vehicle, field, value)
-    
-    db.commit()
-    db.refresh(db_vehicle)
-    return db_vehicle
+    try:
+        logger.info(f"Updating vehicle {vehicle_id} for user {current_user['sub']}")
+        db_vehicle = db.query(Vehicle).filter(
+            Vehicle.id == vehicle_id,
+            Vehicle.user_id == current_user["sub"]
+        ).first()
+        
+        if not db_vehicle:
+            handle_not_found(vehicle_id)
+        
+        update_data = vehicle_update.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_vehicle, field, value)
+        
+        db.commit()
+        db.refresh(db_vehicle)
+        logger.info(f"Successfully updated vehicle {vehicle_id}")
+        return db_vehicle
+    except Exception as e:
+        handle_db_error("update_vehicle", e)
 
 @router.delete(
     "/{vehicle_id}",
@@ -172,16 +194,19 @@ async def delete_vehicle(
     - 204 No Content on successful deletion
     - 404 error if vehicle not found or not owned by user
     """
-    db_vehicle = db.query(Vehicle).filter(
-        Vehicle.id == vehicle_id,
-        Vehicle.user_id == current_user["sub"]
-    ).first()
-    if not db_vehicle:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Vehicle not found"
-        )
-    
-    db.delete(db_vehicle)
-    db.commit()
-    return None 
+    try:
+        logger.info(f"Deleting vehicle {vehicle_id} for user {current_user['sub']}")
+        db_vehicle = db.query(Vehicle).filter(
+            Vehicle.id == vehicle_id,
+            Vehicle.user_id == current_user["sub"]
+        ).first()
+        
+        if not db_vehicle:
+            handle_not_found(vehicle_id)
+        
+        db.delete(db_vehicle)
+        db.commit()
+        logger.info(f"Successfully deleted vehicle {vehicle_id}")
+        return None
+    except Exception as e:
+        handle_db_error("delete_vehicle", e) 
