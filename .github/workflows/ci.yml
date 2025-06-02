@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, vehicle, telematics, load_matching]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        cd services/${{ matrix.service }}
+        pip install -r requirements.txt
+        
+    - name: Run tests
+      run: |
+        cd services/${{ matrix.service }}
+        pytest tests/ --disable-warnings -v
+        
+    - name: Run Ruff
+      run: |
+        cd services/${{ matrix.service }}
+        ruff check .
+        
+    - name: Run coverage
+      run: |
+        cd services/${{ matrix.service }}
+        pytest --cov=. --cov-report=xml
+        
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./services/${{ matrix.service }}/coverage.xml
+        fail_ci_if_error: true 
