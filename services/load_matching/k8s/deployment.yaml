@@ -4,6 +4,13 @@ metadata:
   name: load-matching
   labels:
     app: load-matching
+  annotations:
+    team: "tamp-core"
+    owner: "bruce-mogale"
+    git.commit: "c164b01"
+    git.branch: "feature/sprint7-load-matching"
+    managed-by: "kubectl"
+    contact: "bruce@onlybot.ai"
 spec:
   replicas: 3
   selector:
@@ -13,6 +20,10 @@ spec:
     metadata:
       labels:
         app: load-matching
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: load-matching
@@ -59,6 +70,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: load-matching
+  annotations:
+    team: "tamp-core"
+    owner: "bruce-mogale"
+    git.commit: "c164b01"
+    git.branch: "feature/sprint7-load-matching"
 spec:
   selector:
     app: load-matching
@@ -76,6 +92,10 @@ kind: Ingress
 metadata:
   name: load-matching
   annotations:
+    team: "tamp-core"
+    owner: "bruce-mogale"
+    git.commit: "c164b01"
+    git.branch: "feature/sprint7-load-matching"
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
@@ -95,6 +115,11 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: load-matching
+  annotations:
+    team: "tamp-core"
+    owner: "bruce-mogale"
+    git.commit: "c164b01"
+    git.branch: "feature/sprint7-load-matching"
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
