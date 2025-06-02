@@ -1,4 +1,6 @@
-# TAMP-MVP
+# TAMP Telematics Service
+
+[![CI](https://github.com/ONLYBOTAi/TAMP-MVP/actions/workflows/ci.yml/badge.svg)](https://github.com/ONLYBOTAi/TAMP-MVP/actions/workflows/ci.yml)
 
 This is the MVP monorepo for the Truck Asset Matchmaking Platform (TAMP), built with containerized Python microservices using FastAPI and JWT authentication. It includes:
 
