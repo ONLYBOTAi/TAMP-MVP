@@ -35,8 +35,14 @@ def valid_telemetry_data():
         "odometer": 50000.0,
         "trip_distance": 25.0,
         "diagnostic_codes": {"P0300": "Random/Multiple Cylinder Misfire"},
-        "warning_lights": {"check_engine": True}
+        "warning_lights": {"check_engine": True},
+        "timestamp": datetime.utcnow().isoformat()
     }
+
+@pytest.fixture
+def auth_headers(valid_token):
+    """Create authorization headers with valid token."""
+    return {"Authorization": f"Bearer {valid_token}"}
 
 @pytest.mark.asyncio
 async def test_ingest_telemetry_success(valid_token, valid_telemetry_data):
@@ -45,7 +51,7 @@ async def test_ingest_telemetry_success(valid_token, valid_telemetry_data):
         mock_get_vehicle.return_value = {"id": 1, "status": "active"}
         
         response = client.post(
-            "/api/v1/telemetry/ingest",
+            "/telemetry/ingest",
             json=valid_telemetry_data,
             headers={"Authorization": f"Bearer {valid_token}"}
         )
@@ -61,7 +67,7 @@ async def test_ingest_telemetry_success(valid_token, valid_telemetry_data):
 async def test_ingest_telemetry_unauthorized(invalid_token, valid_telemetry_data):
     """Test telemetry ingestion with invalid token."""
     response = client.post(
-        "/api/v1/telemetry/ingest",
+        "/telemetry/ingest",
         json=valid_telemetry_data,
         headers={"Authorization": f"Bearer {invalid_token}"}
     )
@@ -76,7 +82,7 @@ async def test_ingest_telemetry_vehicle_not_found(valid_token, valid_telemetry_d
         mock_get_vehicle.return_value = None
         
         response = client.post(
-            "/api/v1/telemetry/ingest",
+            "/telemetry/ingest",
             json=valid_telemetry_data,
             headers={"Authorization": f"Bearer {valid_token}"}
         )
@@ -94,7 +100,7 @@ async def test_ingest_telemetry_invalid_data(valid_token):
     }
     
     response = client.post(
-        "/api/v1/telemetry/ingest",
+        "/telemetry/ingest",
         json=invalid_data,
         headers={"Authorization": f"Bearer {valid_token}"}
     )
@@ -111,7 +117,7 @@ async def test_ingest_telemetry_missing_required_fields(valid_token):
     }
     
     response = client.post(
-        "/api/v1/telemetry/ingest",
+        "/telemetry/ingest",
         json=incomplete_data,
         headers={"Authorization": f"Bearer {valid_token}"}
     )

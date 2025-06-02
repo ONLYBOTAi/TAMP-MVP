@@ -8,9 +8,6 @@ from core.database import get_db
 from core.security import get_current_user
 from core.vehicle_client import VehicleClient
 from workers.ingestion_worker import process_telemetry_data
-
-print("✅ get_current_user being used from:", get_current_user.__module__)
-
 from models.telemetry import TelemetryData, TelemetryAlert
 from schemas.telemetry import (
     TelemetryDataCreate,
@@ -20,17 +17,13 @@ from schemas.telemetry import (
     TelemetryAlertUpdate
 )
 
+print("✅ get_current_user being used from:", get_current_user.__module__)
+
 router = APIRouter(
     tags=["Telemetry"]
 )
 
 logger = logging.getLogger(__name__)
-
-class TelemetryData(BaseModel):
-    vehicle_id: str
-    timestamp: datetime
-    data: Dict[str, Any]
-    metadata: Optional[Dict[str, Any]] = None
 
 @router.post("/data", response_model=TelemetryDataSchema, status_code=201)
 async def create_telemetry_data(
@@ -254,6 +247,13 @@ async def ingest_telemetry(
         # Validate vehicle exists
         vehicle = await vehicle_client.get_vehicle(data.vehicle_id)
         if not vehicle:
+            logger.warning(
+                "Vehicle not found",
+                extra={
+                    "vehicle_id": data.vehicle_id,
+                    "user": current_user
+                }
+            )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vehicle not found"
@@ -278,6 +278,8 @@ async def ingest_telemetry(
             "status": "queued"
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
             "Error processing telemetry data",
@@ -292,30 +294,27 @@ async def ingest_telemetry(
             detail="Error processing telemetry data"
         )
 
-@router.get("/status/{vehicle_id}")
+@router.get("/status/{vehicle_id}", response_model=Dict[str, Any])
 async def get_telemetry_status(
     vehicle_id: str,
-    current_user: str = Depends(get_current_user),
-    vehicle_client: VehicleClient = Depends()
+    current_user: str = Depends(get_current_user)
 ):
     """
-    Get the processing status of telemetry data for a vehicle.
+    Get telemetry status for a vehicle.
+    
+    Args:
+        vehicle_id: ID of the vehicle
+        current_user: The authenticated user
+    
+    Returns:
+        Dict[str, Any]: Status information
     """
     try:
-        # Validate vehicle exists
-        vehicle = await vehicle_client.get_vehicle(vehicle_id)
-        if not vehicle:
-            raise HTTPException(status_code=404, detail="Vehicle not found")
-
-        # TODO: Implement status check logic
-        # This will be implemented in the worker module
-        
         return {
             "vehicle_id": vehicle_id,
-            "status": "processing",
+            "status": "active",
             "last_update": datetime.utcnow().isoformat()
         }
-    
     except Exception as e:
         logger.error(
             "Failed to get telemetry status",
@@ -325,4 +324,7 @@ async def get_telemetry_status(
                 "user": current_user
             }
         )
-        raise HTTPException(status_code=500, detail="Failed to get telemetry status") 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get telemetry status"
+        ) 

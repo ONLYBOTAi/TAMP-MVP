@@ -11,7 +11,7 @@ def test_valid_token_access(client: TestClient):
     headers = {"Authorization": f"Bearer {token}"}
     
     # Test GET endpoint
-    response = client.get("/api/v1/telemetry/data?vehicle_id=1", headers=headers)
+    response = client.get("/telemetry/data?vehicle_id=1", headers=headers)
     assert response.status_code == 200
     
     # Test POST endpoint
@@ -21,7 +21,7 @@ def test_valid_token_access(client: TestClient):
         "longitude": -122.4194,
         "speed": 60.0
     }
-    response = client.post("/api/v1/telemetry/data", json=data, headers=headers)
+    response = client.post("/telemetry/data", json=data, headers=headers)
     assert response.status_code == 201
 
 def test_invalid_token_access(client: TestClient):
@@ -29,7 +29,7 @@ def test_invalid_token_access(client: TestClient):
     headers = {"Authorization": "Bearer invalid_token"}
     
     # Test GET endpoint
-    response = client.get("/api/v1/telemetry/data?vehicle_id=1", headers=headers)
+    response = client.get("/telemetry/data?vehicle_id=1", headers=headers)
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials"
     
@@ -40,14 +40,14 @@ def test_invalid_token_access(client: TestClient):
         "longitude": -122.4194,
         "speed": 60.0
     }
-    response = client.post("/api/v1/telemetry/data", json=data, headers=headers)
+    response = client.post("/telemetry/data", json=data, headers=headers)
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials"
 
 def test_missing_token_access(client: TestClient):
     """Test that missing token is rejected."""
     # Test GET endpoint
-    response = client.get("/api/v1/telemetry/data?vehicle_id=1")
+    response = client.get("/telemetry/data?vehicle_id=1")
     assert response.status_code == 401
     assert response.json()["detail"] == "Not authenticated"
     
@@ -58,7 +58,7 @@ def test_missing_token_access(client: TestClient):
         "longitude": -122.4194,
         "speed": 60.0
     }
-    response = client.post("/api/v1/telemetry/data", json=data)
+    response = client.post("/telemetry/data", json=data)
     assert response.status_code == 401
     assert response.json()["detail"] == "Not authenticated"
 
@@ -68,7 +68,7 @@ def test_expired_token_access(client: TestClient):
     headers = {"Authorization": f"Bearer {token}"}
     
     # Test GET endpoint
-    response = client.get("/api/v1/telemetry/data?vehicle_id=1", headers=headers)
+    response = client.get("/telemetry/data?vehicle_id=1", headers=headers)
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials"
     
@@ -79,6 +79,6 @@ def test_expired_token_access(client: TestClient):
         "longitude": -122.4194,
         "speed": 60.0
     }
-    response = client.post("/api/v1/telemetry/data", json=data, headers=headers)
+    response = client.post("/telemetry/data", json=data, headers=headers)
     assert response.status_code == 401
     assert response.json()["detail"] == "Could not validate credentials" 

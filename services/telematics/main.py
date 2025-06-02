@@ -6,7 +6,7 @@ from core.database import engine, Base
 import logging
 
 from core.logging import setup_logging
-from routers import telemetry_routes, auth_routes
+from routers import telemetry_routes
 
 # Setup logging
 logger = setup_logging()
@@ -31,8 +31,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(auth_routes.router)
-app.include_router(telemetry_routes.router)
+app.include_router(telemetry_routes.router, prefix="/telemetry", tags=["telemetry"])
 
 @app.on_event("startup")
 async def startup_event():

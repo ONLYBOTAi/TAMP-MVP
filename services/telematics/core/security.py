@@ -3,11 +3,32 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from typing import Optional
+from datetime import datetime, timedelta
 
 from core.database import get_db
 from core.config import get_settings
 
 settings = get_settings()
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """
+    Create a new JWT access token.
+    
+    Args:
+        data: Data to encode in the token
+        expires_delta: Optional expiration time delta
+        
+    Returns:
+        str: Encoded JWT token
+    """
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):

@@ -18,11 +18,12 @@ async def process_telemetry_data(data: TelemetryData):
     This function is called by the background task in the API endpoint.
     """
     try:
+        current_time = datetime.utcnow()
         logger.info(
             "Starting telemetry data processing",
             extra={
                 "vehicle_id": data.vehicle_id,
-                "timestamp": data.timestamp.isoformat()
+                "timestamp": current_time.isoformat()
             }
         )
 
@@ -41,7 +42,7 @@ async def process_telemetry_data(data: TelemetryData):
             "Completed telemetry data processing",
             extra={
                 "vehicle_id": data.vehicle_id,
-                "timestamp": data.timestamp.isoformat()
+                "timestamp": current_time.isoformat()
             }
         )
 
@@ -50,7 +51,7 @@ async def process_telemetry_data(data: TelemetryData):
             "Failed to process telemetry data",
             extra={
                 "vehicle_id": data.vehicle_id,
-                "timestamp": data.timestamp.isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
                 "error": str(e)
             }
         )
