@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+import logging
 
 from core.database import get_db
 from core.security import get_current_user
+from core.vehicle_client import VehicleClient
+from workers.ingestion_worker import process_telemetry_data
+
 print("✅ get_current_user being used from:", get_current_user.__module__)
 
 from models.telemetry import TelemetryData, TelemetryAlert
@@ -19,6 +23,14 @@ from schemas.telemetry import (
 router = APIRouter(
     tags=["Telemetry"]
 )
+
+logger = logging.getLogger(__name__)
+
+class TelemetryData(BaseModel):
+    vehicle_id: str
+    timestamp: datetime
+    data: Dict[str, Any]
+    metadata: Optional[Dict[str, Any]] = None
 
 @router.post("/data", response_model=TelemetryDataSchema, status_code=201)
 async def create_telemetry_data(
@@ -158,4 +170,159 @@ async def update_telemetry_alert(
     
     db.commit()
     db.refresh(db_alert)
-    return db_alert 
+    return db_alert
+
+@router.post(
+    "/ingest",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Ingest telemetry data from vehicles",
+    description="""
+    Accepts telemetry data from vehicles and queues it for asynchronous processing.
+    
+    The endpoint performs the following:
+    1. Validates the vehicle exists in the system
+    2. Queues the telemetry data for background processing
+    3. Returns an immediate acknowledgment
+    
+    **Note**: This is an asynchronous endpoint. The actual processing happens in the background.
+    """,
+    responses={
+        202: {
+            "description": "Telemetry data accepted for processing",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Telemetry data queued for processing",
+                        "vehicle_id": "123",
+                        "timestamp": "2024-03-14T12:00:00Z",
+                        "status": "queued"
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "Vehicle not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Vehicle not found"
+                    }
+                }
+            }
+        },
+        422: {
+            "description": "Validation error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["body", "vehicle_id"],
+                                "msg": "field required",
+                                "type": "value_error.missing"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+)
+async def ingest_telemetry(
+    data: TelemetryDataCreate,
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user),
+    vehicle_client: VehicleClient = Depends()
+):
+    """
+    Ingest telemetry data from vehicles.
+    
+    Args:
+        data (TelemetryDataCreate): The telemetry data to ingest
+        background_tasks (BackgroundTasks): FastAPI background tasks handler
+        current_user (str): The authenticated user
+        vehicle_client (VehicleClient): Vehicle service client
+    
+    Returns:
+        Dict[str, Any]: Processing status and metadata
+    
+    Raises:
+        HTTPException: If vehicle not found or validation fails
+    """
+    try:
+        # Validate vehicle exists
+        vehicle = await vehicle_client.get_vehicle(data.vehicle_id)
+        if not vehicle:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Vehicle not found"
+            )
+
+        # Queue data for processing
+        background_tasks.add_task(process_telemetry_data, data)
+        
+        logger.info(
+            "Telemetry data queued for processing",
+            extra={
+                "vehicle_id": data.vehicle_id,
+                "timestamp": datetime.utcnow().isoformat(),
+                "user": current_user
+            }
+        )
+        
+        return {
+            "message": "Telemetry data queued for processing",
+            "vehicle_id": data.vehicle_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "status": "queued"
+        }
+        
+    except Exception as e:
+        logger.error(
+            "Error processing telemetry data",
+            extra={
+                "vehicle_id": data.vehicle_id,
+                "error": str(e),
+                "user": current_user
+            }
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing telemetry data"
+        )
+
+@router.get("/status/{vehicle_id}")
+async def get_telemetry_status(
+    vehicle_id: str,
+    current_user: str = Depends(get_current_user),
+    vehicle_client: VehicleClient = Depends()
+):
+    """
+    Get the processing status of telemetry data for a vehicle.
+    """
+    try:
+        # Validate vehicle exists
+        vehicle = await vehicle_client.get_vehicle(vehicle_id)
+        if not vehicle:
+            raise HTTPException(status_code=404, detail="Vehicle not found")
+
+        # TODO: Implement status check logic
+        # This will be implemented in the worker module
+        
+        return {
+            "vehicle_id": vehicle_id,
+            "status": "processing",
+            "last_update": datetime.utcnow().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(
+            "Failed to get telemetry status",
+            extra={
+                "vehicle_id": vehicle_id,
+                "error": str(e),
+                "user": current_user
+            }
+        )
+        raise HTTPException(status_code=500, detail="Failed to get telemetry status") 
