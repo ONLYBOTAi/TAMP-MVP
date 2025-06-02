@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, s
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-import logging
+import structlog
 
 from core.database import get_db
 from core.security import get_current_user
@@ -23,7 +23,7 @@ router = APIRouter(
     tags=["Telemetry"]
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 @router.post("/data", response_model=TelemetryDataSchema, status_code=201)
 async def create_telemetry_data(
@@ -229,69 +229,57 @@ async def ingest_telemetry(
     vehicle_client: VehicleClient = Depends()
 ):
     """
-    Ingest telemetry data from vehicles.
-    
-    Args:
-        data (TelemetryDataCreate): The telemetry data to ingest
-        background_tasks (BackgroundTasks): FastAPI background tasks handler
-        current_user (str): The authenticated user
-        vehicle_client (VehicleClient): Vehicle service client
-    
-    Returns:
-        Dict[str, Any]: Processing status and metadata
-    
-    Raises:
-        HTTPException: If vehicle not found or validation fails
+    Ingest telemetry data from a vehicle.
+    The data is processed asynchronously in the background.
     """
     try:
         # Validate vehicle exists
         vehicle = await vehicle_client.get_vehicle(data.vehicle_id)
         if not vehicle:
             logger.warning(
-                "Vehicle not found",
-                extra={
-                    "vehicle_id": data.vehicle_id,
-                    "user": current_user
-                }
+                "vehicle_not_found",
+                vehicle_id=data.vehicle_id,
+                user=current_user
             )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Vehicle not found"
             )
 
-        # Queue data for processing
-        background_tasks.add_task(process_telemetry_data, data)
-        
-        logger.info(
-            "Telemetry data queued for processing",
-            extra={
-                "vehicle_id": data.vehicle_id,
-                "timestamp": datetime.utcnow().isoformat(),
-                "user": current_user
-            }
+        # Queue the telemetry data for background processing
+        background_tasks.add_task(
+            process_telemetry_data,
+            data=data.model_dump(),
+            metadata={"user": current_user, "vehicle": vehicle}
         )
-        
+
+        logger.info(
+            "telemetry_queued",
+            vehicle_id=data.vehicle_id,
+            user=current_user,
+            timestamp=datetime.utcnow().isoformat()
+        )
+
         return {
             "message": "Telemetry data queued for processing",
             "vehicle_id": data.vehicle_id,
             "timestamp": datetime.utcnow().isoformat(),
             "status": "queued"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(
-            "Error processing telemetry data",
-            extra={
-                "vehicle_id": data.vehicle_id,
-                "error": str(e),
-                "user": current_user
-            }
+            "telemetry_ingestion_error",
+            vehicle_id=data.vehicle_id,
+            user=current_user,
+            error=str(e),
+            error_type=type(e).__name__
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error processing telemetry data"
+            detail="Failed to process telemetry data"
         )
 
 @router.get("/status/{vehicle_id}", response_model=Dict[str, Any])
