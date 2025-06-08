@@ -6,8 +6,8 @@ from typing import List
 import logging
 from datetime import datetime
 from core.config import get_settings
-from core.database import engine, Base
-import asyncio
+from core.database import engine, Base, init_models
+from contextlib import asynccontextmanager
 
 from core.logging import setup_logging
 from routers import telemetry_routes
@@ -15,17 +15,17 @@ from routers import telemetry_routes
 # Setup logging
 logger = setup_logging()
 
-async def init_models():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-asyncio.run(init_models())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_models()
+    yield
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Telematics Service",
     description="Service for handling vehicle telemetry data",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Configure CORS
