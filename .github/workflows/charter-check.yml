@@ -1,0 +1,21 @@
+name: Charter Presence Check
+
+on:
+  push:
+    paths:
+      - 'docs/tech_lead_command_charter.md'
+  pull_request:
+    paths:
+      - 'docs/tech_lead_command_charter.md'
+
+jobs:
+  check-charter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify charter file exists
+        run: |
+          if ! grep -q 'Version 1.3' docs/tech_lead_command_charter.md; then
+            echo 'ERROR: tech_lead_command_charter.md missing or version mismatch' >&2
+            exit 1
+          fi 
