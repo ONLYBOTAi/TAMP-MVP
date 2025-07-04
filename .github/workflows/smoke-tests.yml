@@ -1,0 +1,31 @@
+name: Sprint 9 Smoke Tests
+
+on:
+  push:
+    branches: [sprint/9]
+  pull_request:
+    branches: [sprint/9]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:14
+        ports: [5432:5432]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Docker Compose
+        run: sudo apt-get update && sudo apt-get install -y docker-compose
+      - name: Build & Start Services
+        run: docker compose -f docker-compose.dev.yml up -d --build
+      - name: Run E2E Smoke Test
+        run: pytest tests/e2e/smoke_test.py 
