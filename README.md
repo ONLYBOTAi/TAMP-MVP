@@ -1,20 +1,69 @@
-# TAMP Telematics Service
+# TAMP (Telematics and Asset Management Platform)
 
-[![CI](https://github.com/ONLYBOTAi/TAMP-MVP/actions/workflows/ci.yml/badge.svg)](https://github.com/ONLYBOTAi/TAMP-MVP/actions/workflows/ci.yml)
+A microservices-based platform for managing telematics data and vehicle assets.
 
-This is the MVP monorepo for the Truck Asset Matchmaking Platform (TAMP), built with containerized Python microservices using FastAPI and JWT authentication. It includes:
+## Services
 
-- 🚚 `vehicle-service`: secure CRUD API for truck listings  
-- 🔐 `auth-service`: token-based role authentication (client, truck_owner, admin)  
-- 📦 `shared/`: OpenAPI contracts and token utilities  
-- 🧪 `tests/`: shell-based API regression tests  
+The platform consists of three main services:
 
-## Getting Started
+1. **Auth Service** (Port 8000)
+   - Handles user authentication and authorization
+   - Swagger UI: http://127.0.0.1:8000/docs
 
-1. Clone this repo  
-2. Copy `.env.sample` to `.env` in both services  
-3. Run `docker compose -f docker-compose.dev.yml up --build`  
-4. Execute `./tests/vehicle_tests.sh` to verify
+2. **Vehicle Service** (Port 8001)
+   - Manages vehicle information and metadata
+   - Swagger UI: http://127.0.0.1:8001/docs
+
+3. **Telematics Service** (Port 8002)
+   - Processes and stores telematics data
+   - Swagger UI: http://127.0.0.1:8002/docs
+
+## Setup Instructions
+
+1. Create and activate virtual environment:
+   ```bash
+   python3 -m venv tamp-venv
+   source tamp-venv/bin/activate
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Start the services:
+   ```bash
+   # Auth Service
+   cd services/auth
+   uvicorn main:app --host 0.0.0.0 --port 8000
+
+   # Vehicle Service
+   cd services/vehicle
+   uvicorn main:app --host 0.0.0.0 --port 8001
+
+   # Telematics Service
+   cd services/telematics
+   uvicorn main:app --host 0.0.0.0 --port 8002
+   ```
+
+## Development
+
+- Each service has its own directory under `services/`
+- Common dependencies are managed in the root `requirements.txt`
+- Use the Swagger UI endpoints to test API functionality
+- Follow the microservices architecture pattern for new features
+
+## Environment Variables
+
+Each service requires its own `.env` file with appropriate configuration. See individual service directories for required variables.
+
+## Testing
+
+Run tests for each service:
+```bash
+cd services/<service-name>
+pytest
+```
 
 ## Git Strategy
 
@@ -66,3 +115,27 @@ The platform follows a microservices architecture with:
 ## License
 
 Proprietary - © ONLYBOTAI 2024 
+
+## Local Setup & Tests
+
+1. Copy example env files:
+   ```bash
+   find services -type f -name ".env.example" -exec cp {} {}.env \;
+   ```
+Install dependencies:
+
+```bash
+python3 -m venv tamp-venv && source tamp-venv/bin/activate
+pip install -r services/<your_service>/requirements.txt
+```
+Create Sprint 9 GitHub issues:
+
+```bash
+scripts/create_issues.sh
+```
+Run smoke tests locally:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+pytest tests/e2e/smoke_test.py
+``` 
