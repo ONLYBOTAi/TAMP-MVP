@@ -31,6 +31,11 @@ jobs:
         cd services/telematics
         pip install -r requirements.txt
         
+    - name: Prepare service envs for tests
+      run: |
+        for svc in auth vehicle telematics load_matching matcher trailer; do
+          cp services/$svc/.env.example services/$svc/.env
+        done
     - name: Run tests
       run: |
         cd services/telematics
