@@ -3,8 +3,12 @@ name: Sprint 9 Smoke Tests
 on:
   push:
     branches: [sprint/9]
+    paths-ignore:
+      - '**/*.env.example'
   pull_request:
     branches: [sprint/9]
+    paths-ignore:
+      - '**/*.env.example'
 
 jobs:
   smoke:

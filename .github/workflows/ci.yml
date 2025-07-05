@@ -3,8 +3,12 @@ name: CI - Sprint 6
 on:
   push:
     branches: [ dev, feature/** ]
+    paths-ignore:
+      - '**/*.env.example'
   pull_request:
     branches: [ dev ]
+    paths-ignore:
+      - '**/*.env.example'
 
 jobs:
   build-and-test:
