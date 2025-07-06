@@ -1,4 +1,4 @@
-name: Python CI
+name: Python CI / test (3.11) – Sprint 9
 
 on:
   push:
