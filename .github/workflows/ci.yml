@@ -40,6 +40,14 @@ jobs:
         with:
           python-version: 3.11
 
+      - name: Install system build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            python3-dev \
+            libpq-dev
+
       - name: Install dependencies (per-service, Sprint 9)
         run: |
           python -m pip install --upgrade pip

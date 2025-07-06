@@ -25,11 +25,20 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         
+    - name: Install system build deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          python3-dev \
+          libpq-dev
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        cd services/telematics
-        pip install -r requirements.txt
+        for svc in auth vehicle telematics load_matching matcher trailer; do
+          pip install --no-cache-dir -r services/$svc/requirements.txt
+        done
         
     - name: Prepare service envs for tests
       run: |
