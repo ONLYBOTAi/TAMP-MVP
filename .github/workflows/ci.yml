@@ -42,16 +42,17 @@ jobs:
 
       - name: Debug Python include path
         run: |
-          python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])"
-          ls -l $(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")/longintrepr.h || echo "HEADER NOT FOUND"
+          INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
+          echo "Looking in: $INC"
+          ls -l $INC/longintrepr.h || echo "::error::Header not found at $INC/longintrepr.h"
 
-      - name: Install system build deps
+      - name: Install Python headers & build deps
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential \
-            python3.11-dev \
-            libpq-dev
+            libpq-dev \
+            python3.11-dev
 
       - name: Install dependencies (per-service, Sprint 9)
         run: |

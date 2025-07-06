@@ -25,13 +25,19 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         
-    - name: Install system build deps
+    - name: Debug Python include path
+      run: |
+        INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
+        echo "Looking in: $INC"
+        ls -l $INC/longintrepr.h || echo "::error::Header not found at $INC/longintrepr.h"
+
+    - name: Install Python headers & build deps
       run: |
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           build-essential \
-          python3.11-dev \
-          libpq-dev
+          libpq-dev \
+          python3.11-dev
 
     - name: Install dependencies
       run: |
