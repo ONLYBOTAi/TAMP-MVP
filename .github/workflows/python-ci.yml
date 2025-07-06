@@ -1,10 +1,14 @@
-name: Python CI
+name: Python CI / test (3.11) – Sprint 9
 
 on:
   push:
     branches: [ dev, feature/* ]
+    paths-ignore:
+      - 'services/*/.env.example'
   pull_request:
     branches: [ dev ]
+    paths-ignore:
+      - 'services/*/.env.example'
 
 jobs:
   test:
@@ -21,12 +25,32 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         
+    - name: Debug Python include path
+      run: |
+        INC=$(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")
+        echo "Looking in: $INC"
+        ls -l $INC/longintrepr.h || echo "::error::Header not found at $INC/longintrepr.h"
+
+    - name: Install Python headers & build deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          libpq-dev \
+          python3.11-dev
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        cd services/telematics
-        pip install -r requirements.txt
+        for svc in auth vehicle telematics load_matching matcher trailer; do
+          pip install --no-cache-dir -r services/$svc/requirements.txt
+        done
         
+    - name: Prepare service envs for tests
+      run: |
+        for svc in auth vehicle telematics load_matching matcher trailer; do
+          cp services/$svc/.env.example services/$svc/.env
+        done
     - name: Run tests
       run: |
         cd services/telematics

@@ -3,8 +3,12 @@ name: Sprint 9 Smoke Tests
 on:
   push:
     branches: [sprint/9]
+    paths-ignore:
+      - 'services/*/.env.example'
   pull_request:
     branches: [sprint/9]
+    paths-ignore:
+      - 'services/*/.env.example'
 
 jobs:
   smoke:
@@ -25,6 +29,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Docker Compose
         run: sudo apt-get update && sudo apt-get install -y docker-compose
+      - name: Copy env examples
+        run: |
+          for svc in auth vehicle telematics load_matching matcher trailer; do
+            cp services/$svc/.env.example services/$svc/.env
+          done
       - name: Build & Start Services
         run: docker compose -f docker-compose.dev.yml up -d --build
       - name: Run E2E Smoke Test
