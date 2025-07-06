@@ -40,12 +40,17 @@ jobs:
         with:
           python-version: 3.11
 
+      - name: Debug Python include path
+        run: |
+          python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])"
+          ls -l $(python3 -c "import sysconfig; print(sysconfig.get_paths()['include'])")/longintrepr.h || echo "HEADER NOT FOUND"
+
       - name: Install system build deps
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential \
-            python3-dev \
+            python3.11-dev \
             libpq-dev
 
       - name: Install dependencies (per-service, Sprint 9)
