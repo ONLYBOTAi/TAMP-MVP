@@ -1,4 +1,4 @@
-name: CI - Sprint 6
+name: CI - Sprint 9
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: Install dependencies
+      - name: Install dependencies (per-service, Sprint 9)
         run: |
           python -m pip install --upgrade pip
           for svc in auth vehicle telematics load_matching matcher trailer; do
